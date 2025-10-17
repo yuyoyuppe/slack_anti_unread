@@ -4,7 +4,8 @@ A lightweight background utility that prevents Slack's unread notification icon 
 
 ## What It Does
 
-Slack displays a blue dot on its taskbar icon to indicate unread messages. This utility patches Slack to use the same icon whether you have unread messages or not, eliminating the visual distraction.
+Slack displays a blue dot on its taskbar icon to indicate unread messages. This utility patches Slack to use the same icon whether you have unread messages or not, eliminating the visual distraction. Slack will still display a red dot icon in case you've got DMs or mentions.
+
 
 ## How It Works
 
@@ -31,4 +32,5 @@ Requires:
 ```sh
 premake5 vs2022
 # Open build/slack_anti_unread.sln and build
+
 ```

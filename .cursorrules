@@ -43,6 +43,17 @@ Example:
 - Use `std::wstring_view` for read-only string parameters
 - Add `const` everywhere possible (parameters, locals, returns)
 - Use free functions with ADL: `size()`, `begin()`, `end()`, `data()`, `empty()` (omit `std::`)
+- Prefer brace initialization `{}` over parentheses `()` wherever possible
+
+```cpp
+// Good
+wil::unique_handle snapshot{CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)};
+std::vector<std::byte> buffer(static_cast<size_t>(file_size.QuadPart));
+const fs::path changed_path{fileName};
+
+// Bad
+wil::unique_handle snapshot(CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0));
+```
 
 ### Control Flow
 - Invert conditions for early returns (reduce nesting, keep code at left edge)
@@ -64,9 +75,35 @@ if (attrs & FILE_ATTRIBUTE_DIRECTORY) {
 
 ### WINAPI
 - Use C++23 designated initializers for WINAPI structs
+- Omit fields that are default-initialized (nullptr, 0, etc.) from designated initializers
 - Use minimal required permissions for handles
 - Use `WaitForSingleObject()` instead of `Sleep()` for synchronization
 - Never manually call `CloseHandle()` - use WIL smart handles
+- Always initialize POD variables: use `{}` for zero-init (e.g., `DWORD count{};`), use `=` when initializing with a value (e.g., `DWORD size = MAX_PATH;`)
+
+```cpp
+// Good - omit default fields
+const SHELLEXECUTEINFOW sei = {
+    .cbSize = sizeof(SHELLEXECUTEINFOW),
+    .fMask = SEE_MASK_NOASYNC,
+    .lpVerb = L"open",
+    .lpFile = exe_path.c_str(),
+    .nShow = show_command
+};
+
+// Bad - unnecessary default fields
+SHELLEXECUTEINFOW sei = {
+    .cbSize = sizeof(SHELLEXECUTEINFOW),
+    .fMask = SEE_MASK_NOASYNC,
+    .hwnd = nullptr,  // unnecessary
+    .lpVerb = L"open",
+    .lpFile = exe_path.c_str(),
+    .lpParameters = nullptr,  // unnecessary
+    .lpDirectory = nullptr,   // unnecessary
+    .nShow = show_command,
+    .hInstApp = nullptr  // unnecessary
+};
+```
 
 ### Error Handling
 - Use exceptions, not boolean returns

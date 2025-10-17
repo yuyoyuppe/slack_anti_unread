@@ -20,8 +20,8 @@ void setup_logging() {
     if(FAILED(wil::QueryFullProcessImageNameW(GetCurrentProcess(), 0, exe_path)))
         return;
 
-    const fs::path exe_file(exe_path.get());
-    const auto     log_file = fs::path(temp_path.get()) / (exe_file.stem().wstring() + L".log");
+    const fs::path exe_file{exe_path.get()};
+    const auto     log_file = fs::path{temp_path.get()} / (exe_file.stem().wstring() + L".log");
 
     constexpr size_t max_file_size = 1024 * 1024; // 1MB
     constexpr size_t max_files     = 3;

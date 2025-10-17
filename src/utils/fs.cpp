@@ -10,9 +10,9 @@ namespace utils {
 
 fs::path get_local_appdata() {
     if(const auto env_var = wil::TryGetEnvironmentVariableW(L"LOCALAPPDATA"))
-        return fs::path(env_var.get());
+        return fs::path{env_var.get()};
     else
-        throw std::runtime_error("Failed to get LOCALAPPDATA environment variable");
+        throw std::runtime_error{"Failed to get LOCALAPPDATA environment variable"};
 }
 
 std::vector<std::byte> read_file(const fs::path & path) {
@@ -21,11 +21,11 @@ std::vector<std::byte> read_file(const fs::path & path) {
 
     THROW_LAST_ERROR_IF_MSG(!file, "Failed to open file for reading: %ls", path.c_str());
 
-    LARGE_INTEGER file_size;
+    LARGE_INTEGER file_size{};
     THROW_LAST_ERROR_IF_MSG(!GetFileSizeEx(file.get(), &file_size), "Failed to get file size: %ls", path.c_str());
 
-    std::vector<std::byte> buffer(static_cast<size_t>(file_size.QuadPart));
-    DWORD                  _;
+    std::vector<std::byte> buffer{static_cast<size_t>(file_size.QuadPart)};
+    DWORD                  _{};
     THROW_LAST_ERROR_IF_MSG(!ReadFile(file.get(), data(buffer), static_cast<DWORD>(size(buffer)), &_, nullptr),
                             "Failed to read file: %ls",
                             path.c_str());
@@ -39,15 +39,15 @@ void write_file(const fs::path & path, const std::vector<std::byte> & contents) 
 
     THROW_LAST_ERROR_IF_MSG(!file, "Failed to open file for writing: %ls", path.c_str());
 
-    DWORD bytes_written;
+    DWORD bytes_written{};
     THROW_LAST_ERROR_IF_MSG(
       !WriteFile(file.get(), data(contents), static_cast<DWORD>(size(contents)), &bytes_written, nullptr),
       "Failed to write to file: %ls",
       path.c_str());
 
     if(bytes_written != size(contents))
-        throw std::runtime_error(std::format(
-          "Incomplete write to file: {} (wrote {}/{} bytes)", path.string(), bytes_written, size(contents)));
+        throw std::runtime_error{std::format(
+          "Incomplete write to file: {} (wrote {}/{} bytes)", path.string(), bytes_written, size(contents))};
 }
 
 std::vector<fs::path> find_slack_app_folders(const fs::path & slack_path) {
@@ -66,14 +66,11 @@ std::vector<fs::path> find_slack_app_folders(const fs::path & slack_path) {
             continue;
         }
 
-        const std::wstring_view folder_name(find_data.cFileName);
+        const std::wstring_view folder_name{find_data.cFileName};
         const bool              is_slack_app = folder_name.starts_with(L"app-");
-        if(!is_slack_app) {
-            find_data = {};
-            continue;
-        }
+        if(is_slack_app)
+            folders.push_back(slack_path / folder_name);
 
-        folders.push_back(slack_path / find_data.cFileName);
         find_data = {};
     } while(FindNextFileW(find_handle.get(), &find_data));
 

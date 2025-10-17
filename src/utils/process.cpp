@@ -6,6 +6,7 @@
 #include <tlhelp32.h>
 #include <shellapi.h>
 #include <wil/resource.h>
+#include <wil/filesystem.h>
 
 #include "process.hpp"
 
@@ -25,7 +26,7 @@ bool is_process_window_foreground(const DWORD process_id) {
     if(!foreground_window)
         return false;
 
-    DWORD foreground_pid = 0;
+    DWORD foreground_pid{};
     GetWindowThreadProcessId(foreground_window, &foreground_pid);
 
     return foreground_pid == process_id;
@@ -40,7 +41,7 @@ std::optional<process_close_info> close_process(const std::wstring_view process_
     if(!snapshot)
         return std::nullopt;
 
-    PROCESSENTRY32W pe32 = {.dwSize = sizeof(PROCESSENTRY32W)};
+    PROCESSENTRY32W pe32 = {.dwSize = sizeof(decltype(pe32))};
 
     std::optional<process_close_info> info;
     std::vector<wil::unique_handle>   process_handles;
@@ -59,13 +60,9 @@ std::optional<process_close_info> close_process(const std::wstring_view process_
             continue;
 
         if(!info) {
-            wchar_t    path_buffer[MAX_PATH];
-            DWORD      path_size = MAX_PATH;
-            const bool got_path  = QueryFullProcessImageNameW(process.get(), 0, path_buffer, &path_size);
-            if(got_path) {
-                info = process_close_info{.exe_path       = fs::path(std::wstring_view(path_buffer, path_size)),
-                                          .was_foreground = is_process_window_foreground(pe32.th32ProcessID)};
-            }
+            const auto path = wil::QueryFullProcessImageNameW(process.get());
+            info            = process_close_info{.exe_path       = fs::path{path.get()},
+                                                 .was_foreground = is_process_window_foreground(pe32.th32ProcessID)};
         } else if(!info->was_foreground) {
             // Check if any other instance has a foreground window
             if(is_process_window_foreground(pe32.th32ProcessID))
@@ -85,15 +82,11 @@ std::optional<process_close_info> close_process(const std::wstring_view process_
 }
 
 bool start_process(const fs::path & exe_path, const int show_command) {
-    SHELLEXECUTEINFOW sei = {.cbSize       = sizeof(SHELLEXECUTEINFOW),
-                             .fMask        = SEE_MASK_NOASYNC,
-                             .hwnd         = nullptr,
-                             .lpVerb       = L"open",
-                             .lpFile       = exe_path.c_str(),
-                             .lpParameters = nullptr,
-                             .lpDirectory  = nullptr,
-                             .nShow        = show_command,
-                             .hInstApp     = nullptr};
+    SHELLEXECUTEINFOW sei = {.cbSize = sizeof(SHELLEXECUTEINFOW),
+                             .fMask  = SEE_MASK_NOASYNC,
+                             .lpVerb = L"open",
+                             .lpFile = exe_path.c_str(),
+                             .nShow  = show_command};
 
     return ShellExecuteExW(&sei);
 }

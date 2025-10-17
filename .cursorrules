@@ -1,0 +1,98 @@
+# C++ Coding Standards
+
+## Language & Tooling
+- Use C++26 features and standard library
+- Use raw WINAPI - no abstraction layers
+- Use Windows Implementation Library (WIL) for RAII and error handling
+  - `wil::unique_handle`, `wil::unique_hfile`, `wil::unique_hfind` for handles
+  - `THROW_LAST_ERROR_IF_MSG()` for error checking
+  - WIL helpers like `wil::TryGetEnvironmentVariableW()`
+- Use spdlog for logging with appropriate levels (info/warn/error)
+- Use `std::filesystem::path` for all path operations
+
+## File Organization
+
+### Include Order (3 groups with blank lines between)
+1. Standard library headers (alphabetical)
+2. Third-party headers (Windows API, WIL, spdlog, etc.)
+3. Project headers (alphabetical)
+
+Example:
+```cpp
+#include <vector>
+#include <optional>
+
+#include <spdlog/spdlog.h>
+#include <wil/resource.h>
+
+#include "common.hpp"
+#include "fs_utils.hpp"
+```
+
+### Module Structure
+- Separate .hpp and .cpp files (headers = declarations only)
+- Group related utilities in namespaces (e.g., `namespace utils`)
+- Use `namespace fs = std::filesystem;` in common.hpp
+- Place internal/helper functions in anonymous namespace in .cpp files
+
+## Code Style
+
+### Type & Variable Usage
+- Use `auto` where type is obvious from RHS
+- Use `const auto` for immutable values
+- Use `std::wstring_view` for read-only string parameters
+- Add `const` everywhere possible (parameters, locals, returns)
+- Use free functions with ADL: `size()`, `begin()`, `end()`, `data()`, `empty()` (omit `std::`)
+
+### Control Flow
+- Invert conditions for early returns (reduce nesting, keep code at left edge)
+- Omit braces for single-statement blocks
+- Extract complex conditions into descriptive boolean variables
+
+Examples:
+```cpp
+// Good - guard clause, descriptive variable
+const bool is_directory = attrs & FILE_ATTRIBUTE_DIRECTORY;
+if (!is_directory)
+    continue;
+
+// Bad - nested, inline condition
+if (attrs & FILE_ATTRIBUTE_DIRECTORY) {
+    // ...
+}
+```
+
+### WINAPI
+- Use C++23 designated initializers for WINAPI structs
+- Use minimal required permissions for handles
+- Use `WaitForSingleObject()` instead of `Sleep()` for synchronization
+- Never manually call `CloseHandle()` - use WIL smart handles
+
+### Error Handling
+- Use exceptions, not boolean returns
+- Use `THROW_LAST_ERROR_IF_MSG()` for WINAPI error checking
+- Throw `std::system_error` for OS errors
+- Use RAII for all resource management
+- Avoid pervasive try/catch blocks, especially with `throw;`
+- Place try/catch only at logical boundaries (e.g., main(), request handlers, callbacks)
+- Let exceptions propagate naturally to boundaries
+
+### Functions
+- Make functions generic (accept parameters, don't hardcode)
+- Extract domain-specific functions with semantic names
+- Extract complex lambdas to named functions (avoid deep indentation)
+
+### Formatting
+- NO manual padding/spacing in log messages
+- Alignment OK for closely related variables only, otherwise keep them separated by a newline
+
+## Anti-Patterns to Avoid
+- ❌ Using `std::` prefix where ADL applies
+- ❌ Manual resource cleanup (CloseHandle, FindClose, etc.)
+- ❌ C string functions (wcsncmp, _wcsicmp) - use C++ alternatives
+- ❌ String concatenation for paths - use `fs::path` operator `/`
+- ❌ Boolean return codes for error handling
+- ❌ Deeply nested if-else - use early returns
+- ❌ Complex inline lambdas causing excessive indentation
+- ❌ Comments explaining what code does - use descriptive variables instead
+

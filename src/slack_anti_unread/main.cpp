@@ -23,6 +23,12 @@ bool patch_slack_app_icons(const fs::path & app_folder) {
 
     spdlog::info("Checking app folder: {}", app_folder.filename().string());
 
+    std::error_code ec;
+    if(!fs::exists(rest_icon_path, ec) || !fs::exists(unread_icon_path, ec)) {
+        spdlog::info("Icon files not found in this version - skipping");
+        return false;
+    }
+
     try {
         const auto rest_icon   = utils::read_file(rest_icon_path);
         const auto unread_icon = utils::read_file(unread_icon_path);
@@ -33,7 +39,7 @@ bool patch_slack_app_icons(const fs::path & app_folder) {
             return true;
         } else
             spdlog::info("Icons are identical - no action needed");
-    } catch(const std::system_error & e) { spdlog::warn("{}", e.what()); }
+    } catch(const std::exception & e) { spdlog::warn("Failed to patch icons in this version: {}", e.what()); }
 
     return false;
 }

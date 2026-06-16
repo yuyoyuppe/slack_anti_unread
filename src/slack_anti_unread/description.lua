@@ -1,3 +1,3 @@
-kind "ConsoleApp"
+kind "WindowedApp"
 links {"utils"}
 dependson {"utils"}
